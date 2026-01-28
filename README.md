@@ -17,6 +17,7 @@ Overall, I am very pleased with the experience and the result. However, I only s
 
 I sincerely hope you find the assignment satisfactory, and I want to thank you once again for this opportunity.
 
+[SE Take Home Assignment](https://dh-algolia.github.io/se-takehome/)
 
 David Hubartt
 
