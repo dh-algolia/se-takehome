@@ -81,10 +81,10 @@ Hi Leo.
 Welcome to Algolia! 
 I'm happy to give you some direction and clarity here.
 
-Development can be intimidating - but should not be overwhelming. If you are using one (or more) of our partner platforms there very well be a ready-made connectors that would jump start everything. 
+Development can be intimidating - but should not be overwhelming. If you are using one (or more) of our partner platforms, there may be ready-made connectors that would jump start the process. 
 
 I will need just a bit more detail in order to provide you with the most efficient path.
-Are you available to have a chat about your current technical setup and objectives?
+Are you available to have a quick chat about your current technical setup and objectives?
 
 Best,
 
