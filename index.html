@@ -1,0 +1,419 @@
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@5.47.0/dist/lite/builds/browser.umd.js" integrity="sha256-pjlEWJDMSr2FjjkMT0ZjDHs7smXzcanD07i0xm5mYho=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/instantsearch.js@4.86.1/dist/instantsearch.production.min.js" integrity="sha256-k+rK7dc9ZPkA6f1BXxM/qPZXTXFG+vXZGVsS9ABGKH0=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/instantsearch.css/themes/algolia-min.css" />
+</head>
+
+<body>
+    <div class="ais-InstantSearch">
+        <h1>David Hubartt - SE Take Home Assignment - InstantSearch.js</h1>
+        <div id="autocomplete"></div>
+        <hr />
+        <div class="refinement-options">
+            <div id="clear-refinements"></div>
+            <div id="current-refinements"></div>
+        </div>
+        <div class="left-panel">
+            <div id="facets"></div>
+        </div>
+        <div class="right-panel">
+            <div class="sort-options">
+                <div id="stats"></div>
+                <div id="hits-per-page"></div>
+                <div id="sort-by"></div>
+            </div>
+            <div id="hits"></div>
+            <div id="pagination"></div>
+        </div>
+    </div>
+    
+  <script>
+  /* indices */
+    const indexPrimary = "bestbuy_records";
+    const indexSuggestions = "bestbuy_records_query_suggestions";
+    const indexSortPriceAsc = "bestbuy_records_sortby_price_asc";
+    const indexSortPriceDesc = "bestbuy_records_sortby_price_desc";
+    
+  /* initialize the search client */
+    const { liteClient: algoliasearch } = window["algoliasearch/lite"];
+    const search = instantsearch({
+        indexName: indexPrimary,
+        searchClient: algoliasearch("QEJFJVC5UF", "0e92bc409dbaa5e4685d9f748bdce823"),
+        insights: true,
+    });
+
+  /* widgets */
+    const {
+        EXPERIMENTAL_autocomplete,
+        hits,
+        dynamicWidgets,
+        rangeSlider,
+        refinementList,
+        clearRefinements,
+        currentRefinements,
+        pagination,
+        hitsPerPage,
+        sortBy,
+        stats,
+        panel,
+        ratingMenu,
+        //searchBox,
+        toggleRefinement
+    } = instantsearch.widgets;
+
+    search.addWidgets([
+
+        // searchBox({
+        //   container: "#autocomplete",
+        // }),
+
+      /* autocomplete */
+        EXPERIMENTAL_autocomplete({
+            container: '#autocomplete',
+            placeholder: 'Search Best Buy',
+            indices: [{
+                indexName: indexPrimary,
+                getQuery: (item) => item.name,
+                //getUrl: (item) => `/search?q=${item.name}`,  // stay on page 
+                searchParameters: {
+                    hitsPerPage: 5,
+                },
+                templates: {
+                    header({ items }, { html }) {
+                        let headerText = "";
+                        if (items.length) {
+                            headerText = (items.length > 1) ? `Top ${items.length} Results` : 'Top Result';
+                        } else {
+                            headerText = 'No Matching Results';
+                        }
+                        //console.log(items);
+                        return html `<div class="ais-AutocompleteIndexHeaderTitle">${headerText}</div><div class="ais-AutocompleteIndexHeaderLine" />`;
+                    },
+                    item({ item, onSelect }, { html, components }) {
+                        //console.log(item);
+                        return html `<div class="autocomplete-hit" onClick=${onSelect}>
+                            <div class="autocomplete-hit-img-container">
+                                <div class="autocomplete-hit-img"><img src="${item.image}" /></div>
+                            </div>
+                            <div class="autocomplete-hit-name">${components.Highlight({ hit: item, attribute: 'name' })}</div>
+
+                            <div class="autocomplete-hit-rating">
+                                <span style="color: ${ (item.rating > 0) ? 'gold' : 'lightgray' };">★</span>
+                                <span style="color: ${ (item.rating > 1) ? 'gold' : 'lightgray' };">★</span>
+                                <span style="color: ${ (item.rating > 2) ? 'gold' : 'lightgray' };">★</span>
+                                <span style="color: ${ (item.rating > 3) ? 'gold' : 'lightgray' };">★</span>
+                                <span style="color: ${ (item.rating > 4) ? 'gold' : 'lightgray' };">★</span>
+                            </div>
+
+                            <div class="autocomplete-hit-price">\$${item.price.toFixed(2)}</div>
+
+                            </div>`;
+                    },
+                },
+            }],
+            showSuggestions: {
+                indexName: indexSuggestions,
+                // getURL: (item) => `/search?q=${item.query}`, // stay on page 
+            },
+
+
+        }),
+
+        clearRefinements({
+            container: "#clear-refinements",
+            templates: {
+                resetLabel({ hasRefinements }, { html }) {
+                    return html `<span>${hasRefinements ? "Clear All Refinements" : "No Refinements"}</span>`;
+                },
+            },
+        }),
+
+        currentRefinements({
+            container: "#current-refinements",
+            excludedAttributes: ["free_shipping", "query"]
+        }),
+
+        stats({
+            container: "#stats",
+        }),
+
+        hitsPerPage({
+            container: "#hits-per-page",
+            items: [
+                { label: "12 Items Per Page", value: 12, default: true },
+                { label: "24 Items Per Page", value: 24 },
+                { label: "36 hItems Per Page", value: 36 },
+            ],
+        }),
+
+        sortBy({
+            container: "#sort-by",
+            items: [
+                { label: "Sort By Featured", value: indexPrimary },
+                { label: "Sort By Price (Asc)", value: indexSortPriceAsc },
+                { label: "Sort By Price (Desc)", value: indexSortPriceDesc },
+            ],
+        }),
+
+      /* search results */
+        hits({
+            container: "#hits",
+            templates: {
+                item(hit, { html, components, sendEvent }) {
+
+                    return html `
+                    <div>
+                      <div class="imgDivContainer"><img src="${hit.image}" align="center" alt="${hit.name}" /></div>
+                      <div class="hit-name">${components.Highlight({ hit, attribute: "name" })}</div>
+                      <div class="hit-rating">
+                        <span style="color: ${ (hit.rating > 0) ? 'gold' : 'lightgray' };">★</span>
+                        <span style="color: ${ (hit.rating > 1) ? 'gold' : 'lightgray' };">★</span>
+                        <span style="color: ${ (hit.rating > 2) ? 'gold' : 'lightgray' };">★</span>
+                        <span style="color: ${ (hit.rating > 3) ? 'gold' : 'lightgray' };">★</span>
+                        <span style="color: ${ (hit.rating > 4) ? 'gold' : 'lightgray' };">★</span>
+                      </div>
+                      <div class="hit-price">$${hit.price}</div>
+                      <div class="add-to-cart-button" onClick="${() => sendEvent('click', hit, 'Product Clicked')}">Add to cart</div>
+                    </div>
+                  `;
+                },
+                empty: ({ query }, { html }) =>
+                    html `<div class="no-results-found">We couldn't find any matches for <strong>${ query }</strong><br /></div>`
+            },
+        }),
+
+      /* dynamically get all configured facets from the dashboard */
+        dynamicWidgets({
+            container: "#facets",
+            widgets: [
+              (container) => panel({
+                  hidden: ({ canRefine }) => !canRefine,
+                  templates: {
+                      header: "rating",
+                  },
+                })(ratingMenu)({ container, attribute: "rating" }),
+
+              (container) => panel({
+                  templates: {
+                      header: "price",
+                  },
+                })(rangeSlider)({ container, attribute: "price" }),
+
+              (container) => panel({
+                  hidden: ({ canRefine }) => !canRefine,
+                  templates: {
+                      header: "Free Shipping",
+                  },
+                })(toggleRefinement)({
+                    container,
+                    attribute: "free_shipping",
+                    on: true,
+                    templates: {
+                        labelText({ count }, { html }) {
+                            return html `<span>Show Items With Free Shipping</span>`;
+                        },
+                    },
+                })
+            ],
+            fallbackWidget: ({ container, attribute }) =>
+                panel({
+                    hidden: ({ canRefine }) => !canRefine,
+                    templates: {
+                        header: attribute,
+                    }
+                })(refinementList)({ container, attribute }),
+        }),
+
+      /* pagination */
+        pagination({ container: "#pagination" }),
+
+    ]); // end  addWidgets()
+
+    /* init */
+    search.start();
+  </script>
+
+  <style>
+    body {
+        font-family: sans-serif;
+        padding: 1em;
+    }
+
+    .ais-InstantSearch {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+
+    .refinement-options {
+        display: flex;
+        justify-content: flex-start;
+    }
+
+    .ais-ClearRefinements-button {
+        min-width: 145px;
+        margin-right: 0.5em
+    }
+
+    .ais-ClearRefinements-button--disabled {
+        display: none;
+    }
+
+  /* autocomplete */
+    .ais-AutocompleteIndexList li {
+        border-bottom: 1px solid #c4c8d8;
+    }
+    .ais-AutocompleteIndexList li:last-child {
+        border-bottom: none;
+    }
+
+    .autocomplete-hit-img-container {
+        display: block;
+        margin: 0 10 0 5;
+        padding: 5;
+        width: 60px;
+        height: 60px;
+        float:left;
+        border: 1px solid #dddee1;
+    }
+    .autocomplete-hit-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+
+    }
+    .autocomplete-hit-name {
+        font-weight:bold;
+        margin: 7 0 8 0;
+    }
+    .autocomplete-hit-rating {
+        margin: 4 0 5 0;
+    }
+    .autocomplete-hit-price {
+        font-size:14px;
+        color: #666666;
+    }
+
+  /* facets - left panel */
+    .left-panel {
+        float: left;
+        margin-top: 1em;
+        margin-bottom: 200px;
+        width: 260px;
+    }
+
+    .ais-Panel-header {
+        border-bottom: 1px solid #c4c8d8;
+        margin-top: 2em
+    }
+
+    .ais-RefinementList-count {
+        float: right
+    }
+
+  /* range slider */
+    .ais-RangeSlider {
+        margin: 0 10 70 10 !important;
+        max-width: 235px;
+    }
+
+
+  /* meta */
+    #stats {
+        margin-right: auto;
+        margin-left: 1.5em;
+    }
+
+    .sort-options {
+        display: flex;
+        align-items: center;
+    }
+
+    .ais-SortBy-select {
+        margin: 0.5em;
+    }
+
+    .ais-HitsPerPage-select {
+        margin: 0.5em;
+    }
+
+  /* items */
+    .imgDivContainer {
+        display: block;
+        margin: 0 auto;
+        width: 130px;
+        height: 130px;
+    }
+
+    .ais-Hits-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .hit-name {
+        margin: 0.5em;
+        line-height: 1.4;
+        max-height: 3lh;
+        min-height: 3lh;
+
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+
+        overflow: hidden;
+    }
+
+    .hit-price {
+        font-weight: bold;
+        margin: 0.5em
+    }
+
+    .add-to-cart-button {
+        background: #0096db;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        padding: 0.5em 1em;
+        margin: 0.5em;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .add-to-cart-button:hover {
+        background: #0073a8;
+    }
+
+    .add-to-cart-button:active {
+        background: #1e40af;
+    }
+
+  /* pagination */
+    .ais-Pagination {
+        margin-top: 1em;
+    }
+
+
+  /* No results */
+    .ais-Hits--empty {
+        display: flex;
+        align-items: center;
+    }
+
+    .no-results-found {
+        width: 100%;
+        text-align: center;
+        font-size: 1.5em;
+        padding: 50 0 50 0;
+        margin: 20 8 20 18;
+        border: 1px solid #c4c8d8;
+    }
+  </style>
+
+</body>
+
+</html>
